@@ -1,6 +1,11 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { Toaster } from "@/components/ui/sonner";
+import { ThemeProvider } from "@/components/ui/theme-provider";
+import { Globe, Twitter } from "lucide-react";
+import { Navbar } from "@/components/navbar";
+
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -25,9 +30,30 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased max-w-7xl mx-auto pt-8 px-5`}
       >
-        {children}
+        <ThemeProvider attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange>
+          <Navbar></Navbar>
+          {children}
+          <div className="bottom-0 border-t border-sidebar-muted p-6  text-center text-muted-foreground flex flex-col items-start font-mono">
+            <div>
+
+            Created by <span className="text-white">Rahul Soni</span> 
+            </div>
+            <div className="flex gap-4 items-center justify-center">
+              <div className="flex gap-2 items-center"><Twitter className="w-4 h-4 inline" /><a href="https://x.com/SoniRahul3108" target="_blank" className="underline"><p className="text-white">SoniRahul3108</p></a></div>
+              <div className="flex gap-2 items-center">
+                <Globe className="w-4 h-4 inline text-blue-500" />
+                <a href="https://rahul-soni.vercel.app/" target="_blank" className="underline"><p className="text-white">
+                  https://rahul-soni.vercel.app</p></a>
+              </div>
+              </div> {" "} 
+          </div>
+          <Toaster />
+        </ThemeProvider>
       </body>
     </html>
   );

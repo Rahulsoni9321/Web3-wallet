@@ -1,61 +1,173 @@
 "use client"
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import {  createSolanaWallet, generateSecretPhrase } from "@/lib/create-wallet";
-import { Check } from "lucide-react";
-import { useState } from "react";
+import { MnemonicDisplay } from "@/components/mnemonic-display";
+import { WalletList } from "@/components/wallet-display";
+import { WalletStepper } from "@/components/wallet-stepper";
+import { Wallet } from "lucide-react";
+import { createWallet, generateSecretPhrase } from "@/lib/create-wallet";
+import { ModeToggle } from "@/components/toggle";
+import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {useLocalStorage} from "usehooks-ts";
 
+const steps = [
+  {
+    title: "Generate Phrase",
+    description: "Create recovery phrase",
+  },
+  {
+    title: "Backup",
+    description: "Save your phrase",
+  },
+  {
+    title: "Create Wallet",
+    description: "Generate your wallet",
+  },
+];
 
 export default function Home() {
-   const [mnemonic, setMnemonic] = useState<string | null>(null);
-   const [currentStep,setCurrentStep] = useState<number>(1);
-   const [walletDetails,setWalletDetails] = useState<{publicKey:string,privateKey:string}[]>([]);
-   const [checked, setChecked] = useState<boolean>(false);
-    const generateMnemonic = () => {
-      const mnemonic = generateSecretPhrase();
-      setMnemonic(mnemonic);
-    };
+  const [mnemonic, setMnemonic] = useLocalStorage("mnemonic", "");
+  const [walletType, setWalletType] = useState<"solana" | "ethereum">("solana");
+  const [currentStep, setCurrentStep] = useState<number>(1);
+  const [walletDetails, setWalletDetails] = useState<
+    { Solana: { publicKey: string; privateKey: string }[], Ethereum: { publicKey: string; privateKey: string }[] }
+  >({
+    Solana: [],
+    Ethereum: [],
+  });
+  const [checked, setChecked] = useState<boolean>(false);
 
-    const createWallet = () => {
-      const {publicKey,secret} = createSolanaWallet();
-      setWalletDetails([...walletDetails,{publicKey,privateKey:secret}]);
+
+   useEffect(()=>{
+     if (mnemonic.trim().length>0) setCurrentStep(2);
+   },[])
+  const generateMnemonic = () => {
+    const mnemonic = generateSecretPhrase();
+    setMnemonic(mnemonic);
+    setCurrentStep(2);
+  };
+
+  const deleteWallet = (index: number) => {
+ 
+      if (walletType=="solana") 
+      setWalletDetails({...walletDetails, Solana: walletDetails.Solana.filter((_: { publicKey: string; privateKey: string }, i: number) => i !== index)})
+      else
+      setWalletDetails({...walletDetails, Ethereum: walletDetails.Ethereum.filter((_: { publicKey: string; privateKey: string }, i: number) => i !== index)})
+  }
+
+  const handleCreateWallet = () => {
+    const { publicKey, privateKey } = createWallet(walletType);
+    if (walletType === "solana") {
+      setWalletDetails({ ...walletDetails, Solana: [...walletDetails.Solana, { publicKey, privateKey }] });
+      console.log(localStorage.setItem("solanaWallet", JSON.stringify(walletDetails.Solana)));
     }
+    else {
+      setWalletDetails({ ...walletDetails, Ethereum: [...walletDetails.Ethereum, { publicKey, privateKey }] });
+    }
+    setCurrentStep(3);
+  };
   return (
-    <div className="min-h-screen text-white bg-black flex flex-col items-center justify-center">
-        {currentStep==1 && <> <Button variant={"default"} onClick={generateMnemonic}>Generate Secret Key phrase</Button>
-        {
-            mnemonic && <div className="max-w-4xl mx-auto border border-sidebar-foreground shadow rounded-xl p-8 mt-4">
-          <h1 className="text-2xl font-semibold text-center">Secret Key Phrase</h1>
-          <p className="text-sm mt-2 text-muted-foreground">This is the secret key phrase that you can use to recover your wallet. Keep it safe and secure.</p>
-         <div className="grid grid-cols-3 gap-2 mt-4">
-         { mnemonic.split(" ").map((word, index) => (
-              <span key={index} className="bg-neutral-900/40 text-center  text-sidebar-text backdrop-blur-sm text-white  text-sm px-2 py-3 border border-sidebar-foreground  rounded-lg m-1">{word}</span>
-            ))}
+    <div className="min-h-screen max-w-7xl mx-auto text-foreground">
 
-        </div>
-          <div className="mt-4 m-1 flex items-center">
-            <Checkbox checked={checked} onClick={()=>setChecked(!checked)}  className="border-sidebar-border"></Checkbox>
-            <span className="ml-2 text-primary-foreground font-light text-sm">I have written down the secret key phrase</span>
-            </div>
-            <Button variant={"outline"} onClick={()=>setCurrentStep(currentStep+1)} className="mt-4 text-black w-full" disabled={!checked}>Continue</Button>
-        </div>
-          }
-          </>}
-          {currentStep==2 && <>
-          <Button variant={"default"} onClick={createWallet}>Create Wallet</Button>
-          <div className="grid grid-cols-1 gap-8 p-6 mt-4">
-          {walletDetails.map((wallet,index)=>(
-              <div key={index} className="bg-neutral-900/40 p-6 max-w-3xl rounded-lg flex items-center justify-between">
-              <div>
-              <h1 className="text-lg font-semibold">Wallet {index+1}</h1>
-              <p className="text-sm text-muted-foreground">Public Key: {wallet.publicKey}</p>
-              <p className="text-sm text-muted-foreground ">Private Key: {wallet.privateKey}</p>
-              </div>
-              
-              </div>
-          ))}
+      <div className="container mx-auto px-4 py-12 ">
+        <div className="flex flex-col items-center justify-center mb-12">
+          <div className="flex items-center gap-2 mb-2">
+            <Wallet className="w-8 h-8" />
+            <h1 className="text-3xl font-bold">Wallet Creator</h1>
           </div>
-       </>   }
+          <p className="text-muted-foreground text-center max-w-md">
+            Create and manage your wallets securely. Generate recovery
+            phrases and backup your keys safely.
+          </p>
+        </div>
+
+        <div className=" mx-auto mb-12">
+          <WalletStepper currentStep={currentStep} steps={steps} />
+        </div>
+
+        <div className="flex flex-col items-center gap-8">
+
+          {currentStep === 1 && (
+            <div className="flex flex-col items-center gap-4">
+              <Button
+                size="lg"
+                onClick={generateMnemonic}
+                className="animate-pulse"
+              >
+                Generate Secret Recovery Phrase
+              </Button>
+              <div className="flex flex-col items-center gap-6">
+                <p className="text-white text-center">
+                  Or
+                </p>
+                <p className="text-muted-foreground text-center">import an existing secret recovery phrase</p>
+                <Input
+                  type="text"
+                  placeholder="Enter your secret recovery phrase"
+                  className="input input-bordered w-full "
+                  onChange={(e) => setMnemonic(e.target.value)}
+                />
+                <Button
+                  size="lg"
+                  onClick={() => setCurrentStep(2)}
+                  disabled={!mnemonic}
+                >
+                  Import Secret Recovery Phrase
+                </Button>
+              </div>
+            </div>
+          )}
+
+
+          {mnemonic && currentStep === 2 && (
+            <MnemonicDisplay
+              mnemonic={mnemonic}
+              checked={checked}
+              onCheckChange={setChecked}
+              onContinue={() => setCurrentStep(3)}
+            />
+          )}
+
+          {currentStep === 3 && (
+            <>
+              <Tabs defaultValue="solana" className="w-full max-w-7xl mx-auto flex flex-col items-center gap-2">
+                <TabsList className=" w-full mx-auto max-w-3xl  bg-background border-b border-muted-foreground/60 py-6 ">
+                  <TabsTrigger value="solana" className="text-xl flex gap-2 items-center" onClick={() => setWalletType("solana")}>
+                  <img src="/solana-sol-logo-12828AD23D-seeklogo.com.png" className="w-6 h-6"></img>  Solana
+                  </TabsTrigger>
+                  <TabsTrigger value="ethereum" className="text-xl gap-2" onClick={() => setWalletType("ethereum")}>
+                  <img src="/ethereum-eth-logo.png" className="w-6 h-6"></img> 
+                    Ethereum
+                  </TabsTrigger>
+                </TabsList>
+                <TabsContent value="solana" className="w-full flex flex-col items-center">
+                <Button
+                size="lg"
+                onClick={handleCreateWallet}
+                className="my-12"
+              >
+                {walletDetails.Solana.length === 0 ? "Create Wallet" : "Add Wallet"}
+              </Button>
+              <WalletList walletType={walletType}  wallets={walletDetails.Solana} onDeleted={deleteWallet} />
+              </TabsContent>
+              <TabsContent value="ethereum" className="w-full flex flex-col items-center">
+              <Button
+                size="lg"
+                onClick={handleCreateWallet}
+                className="my-12"
+                >
+                {walletDetails.Ethereum.length === 0 ? "Create Wallet" : "Add Wallet"}
+                </Button>
+                <WalletList walletType={walletType} onDeleted={deleteWallet} wallets={walletDetails.Ethereum} />
+              </TabsContent>
+              </Tabs>
+              
+            </>
+          )}
+        </div>
+      </div>
+
     </div>
   );
 }
